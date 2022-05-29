@@ -1,10 +1,10 @@
 from tkinter import *
 from tkinter import simpledialog
+from gameboard import BoardClass
 import socket
 
 
 def setPlayer2Server() -> (str, int): 
-
     hostNameAnswer = simpledialog.askstring("HostName", "Enter host name/IP address of Player 2")
     portAnswer = simpledialog.askinteger("Player 2 Port", "Enter Player 2's Port")
 
@@ -21,30 +21,50 @@ def setPlayer2Name() -> str:
 def clearFrame(root: Tk): 
     for widget in root.winfo_children():
         widget.destroy()
-
-
-def waitingScreen(root: Tk): 
-    canvas = Canvas(root)    
-    canvas.pack()
-    canvas_text = canvas.create_text(140, 150, text='')
-
-    staticStr = "Waiting"
-    animatedStr = "......"
-
-    #Time delay between chars, in milliseconds
-    delta = 200 
-    delay = 0
-    for i in range(len(animatedStr) + 1):
-        s = animatedStr[:i]
-        update_text = lambda s=s: canvas.itemconfigure(canvas_text, text=staticStr+s)
-        canvas.after(delay, update_text)
-        delay += delta
     
 
 def diplayPlayer1Name(root: Tk, name: str): 
     l = Label(root, text = "Player1 Name: "+name)
     l.config(font =("Courier", 14))
     l.pack()
+
+
+def changeYourMoveText(player2, gameSocket, label, button, isWaiting: bool): 
+    yourTurnText = "It's your turn!"
+    waitText = "Waiting for Player1's move"
+
+    label.config(text = waitText if isWaiting else yourTurnText)
+    button.config(text = "" if isWaiting else "Send Your Move")
+
+
+def sendMoveAction(player2, gameSocket, label, button, isWaiting: bool): 
+    if not player2.getLockMove():
+        player2Move = player2.getMove()
+        gameSocket.sendall(player2Move.encode())
+
+        player2.setLockMove()
+        player2.updateGameBoard(player2Move, "Y")
+
+        changeYourMoveText(player2, gameSocket, label, button, isWaiting)
+
+
+def setupPlayComponents(player2, gameSocket, root: Tk): 
+    l = Label(root, text = "It's your turn!")
+    l.config(font =("Courier", 14))
+    sendMove = Button(root, text = "Send Your Move", 
+                                                command = lambda: 
+                                                sendMoveAction(player2, gameSocket, 
+                                                                                l, sendMove, True))
+
+    l.pack()
+    sendMove.pack()
+
+
+def playGame(player2, gameSocket, root: Tk): 
+    setupPlayComponents(player2, gameSocket, root) 
+
+    # while True: 
+
 
 
 def connectToPlayer1(root: Tk): 
@@ -61,12 +81,25 @@ def connectToPlayer1(root: Tk):
     clientSocket, clientAddress = gameSocket.accept()
 
     # Receive player1 username 
-    player1Name = clientSocket.recv(1024).decode('ascii')
-    diplayPlayer1Name(root, player1Name)
+    player1Username= clientSocket.recv(1024).decode('ascii')
+    diplayPlayer1Name(root, player1Username)
 
     # Create and send player2 username 
     player2Username = setPlayer2Name() 
     clientSocket.sendall(player2Username.encode())
+
+    # Display Board Game with Player 1 move
+    player2 = BoardClass(root, "O", player1Username, player2Username, player2Username)
+    player1Move = clientSocket.recv(1024).decode('ascii')
+    player2.setupBoardGameGUI() 
+    player2.updateGameBoard(player1Move, "X")
+
+    # Play Game 
+    playGame(player2, clientSocket, root) 
+    
+    # Closing Connection
+    # clientSocket.close()
+    # gameSocket.close()
 
 
 def setupPlayer2GUI(): 
@@ -75,7 +108,6 @@ def setupPlayer2GUI():
     frame.geometry('500x500')
 
     connectToPlayer1(frame) 
-    # waitingScreen(frame)
 
     frame.mainloop()
 

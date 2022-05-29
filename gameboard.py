@@ -3,7 +3,7 @@ from tkinter import simpledialog
 
 
 class BoardClass: 
-    def __init__(self, root: Tk, player1Name: str = "", player2Name: str = "", 
+    def __init__(self, root: Tk, marker: str, player1Name: str = "", player2Name: str = "", 
                                 lastPlayerName: str = "", numWins: int = 0, 
                                 numTies: int = 0, numlosses: int = 0):
         self.player1Name = player1Name 
@@ -14,10 +14,42 @@ class BoardClass:
         self.numlosses = numlosses
         self.gamePlayed = 0 
         self.frame = root 
+        
+        self.marker = marker
+
+        self.move = ""
+        self.previousBtn = None 
+        self.lockMove = False
+
+        self.allMoves = []
+        self.board = [[' ',' ',' '],[' ',' ',' '],[' ',' ',' ']]
+        self.buttonBoard = [' ',' ',' ',' ',' ',' ',' ',' ',' ']
+
+
+    def getMove(self): 
+        return self.move 
 
 
     def buttonClicked(self, button, name: str): 
-        
+        if not self.lockMove and name not in self.allMoves:
+            print(button["text"])
+            if self.move != "" and self.move != name: 
+                self.previousBtn["text"] = ""
+                button["text"] = self.marker
+                self.previousBtn = button
+                self.move = name
+            else: 
+                button["text"] = self.marker
+                self.previousBtn = button
+                self.move = name
+
+
+    def setLockMove(self):
+        self.lockMove = not self.lockMove
+
+
+    def getLockMove(self): 
+        return self.lockMove 
 
 
     def setupBoardGameGUI(self): 
@@ -54,8 +86,20 @@ class BoardClass:
         b8.pack(side=LEFT)
         b9.pack(side=LEFT)
 
+        self.buttonBoard[0] = b1
+        self.buttonBoard[1] = b2
+        self.buttonBoard[2] = b3
+
+        self.buttonBoard[3] = b4
+        self.buttonBoard[4] = b5
+        self.buttonBoard[5] = b6
+
+        self.buttonBoard[6] = b7
+        self.buttonBoard[7] = b8
+        self.buttonBoard[8] = b9
+
         # Making the boardGameView in the center of the screen 
-        self.frame.columnconfigure(0, weight=1)  
+        self.frame.columnconfigure(1, weight=1)  
         self.frame.columnconfigure(2, weight=1)  
         self.frame.rowconfigure(0, weight=1)    
         self.frame.rowconfigure(2, weight=1)
@@ -63,3 +107,24 @@ class BoardClass:
 
     def updateGamesPlayed(self): 
         self.gamePlayed += 1 
+
+
+    def resetGameBoard(self):
+        self.board = [[' ',' ',' '],[' ',' ',' '],[' ',' ',' ']]
+        for i in self.buttonBoard:
+            i["text"] = ""
+
+
+    def updateGameBoard(self, move, marker):
+        self.allMoves.append(move)
+
+        for i in range(9): 
+            if move[-1] == str(i+1): 
+                if i  < 3: 
+                    self.board[0][i] = marker
+                elif 3 <= i < 6: 
+                    self.board[1][i-3] = marker
+                elif 6 <= i < 9: 
+                    self.board[2][i-6] = marker
+                
+                self.buttonBoard[i]["text"] = marker if self.buttonBoard[i]["text"] == "" else self.buttonBoard[i]["text"]
