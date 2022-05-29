@@ -1,5 +1,6 @@
 from tkinter import * 
 from tkinter import simpledialog
+from gameboard import BoardClass
 import socket
 
 def setPlayer1Server() -> (str, int): 
@@ -56,6 +57,12 @@ def diplayPlayer2Name(root: Tk, name: str):
     l.config(font =("Courier", 14))
     l.pack()
 
+
+def playGame(gameSocket): 
+    l = Label(root, text = "It's your turn!")
+    l.config(font =("Courier", 14))
+    l.pack()
+
 def connectToPlayer2(root: Tk): 
     clearFrame(root)
 
@@ -70,11 +77,19 @@ def connectToPlayer2(root: Tk):
         gameSocket.sendall(player1Username.encode())
 
         # Receive Player 2 username 
-        player2Name = gameSocket.recv(1024).decode('ascii')
-        diplayPlayer2Name(root, player2Name)
+        player2Username = gameSocket.recv(1024).decode('ascii')
+        diplayPlayer2Name(root, player2Username)
+
+        # Display Board Game 
+        player1 = BoardClass(root, player1Username, player2Username, player2Username)
+        player1.setupBoardGameGUI() 
+
+        # Play Game 
+        playGame(gameSocket) 
 
     except:
         player1TryConnect(root)
+
     finally: 
         gameSocket.close()
 
@@ -84,28 +99,6 @@ def setupPlayer1GUI():
     frame.geometry('500x500')
 
     connectToPlayer2(frame)
-
-    # try:
-    #     gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     gameSocket.connect((server[0], server[1]))
-    #     #Try to send name and info
-    #     gameSocket.sendall(player1Username.encode())
-    #     # #Listen for player 2 name and create obj
-    #     # player2Name = gameSocket.recv(1024).decode('ascii')
-    #     # print('Opponent:', player2Name)
-    #     # #Create BoardClass object for player1
-    #     # #defaulted Player 2 as last so that player 1 can be next
-    #     # player1 = BoardClass(name, player2Name, player2Name)
-    #     # player1.incrementGame()
-    #     # #plays game
-    #     # play(player1, gameSocket, 1)
-    #     # player1.printStats()
-    # except:
-    #     # if tryAgain():
-    #     #     tryConnect()
-    #     print("hi")
-    # finally:
-    #     gameSocket.close()
 
     frame.mainloop()
 
