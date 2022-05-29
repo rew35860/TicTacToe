@@ -63,18 +63,31 @@ def changeYourMoveText(player1, gameSocket, label, button, isWaiting: bool):
     waitText = "Waiting for Player2's move"
 
     label.config(text = waitText if isWaiting else yourTurnText)
-    button.config(text = "" if isWaiting else "Send Your Move")
+    button.config(text = "Get Player2 move" if isWaiting else "Send Your Move")
 
 
 def sendMoveAction(player1, gameSocket, label, button, isWaiting: bool): 
-    if not player1.getLockMove():
-        player1Move = player1.getMove()
-        gameSocket.sendall(player1Move.encode())
+    if player1.moveIsAvalible():
+        print("move")
+        if not player1.getLockMove():
+            print("no move")
+            player1Move = player1.getMove()
+            gameSocket.sendall(player1Move.encode())
 
-        player1.setLockMove()
-        player1.updateGameBoard(player1Move, "X")
+            player1.setLockMove(True)
+            player1.updateGameBoard(player1Move, "X")
 
-        changeYourMoveText(player1, gameSocket, label, button, isWaiting)
+            changeYourMoveText(player1, gameSocket, label, button, isWaiting)
+        else: 
+            print("?? move")
+            Player2Move = gameSocket.recv(1024).decode('ascii')
+            player1.updateGameBoard(Player2Move, "O")
+            
+            player1.setLockMove(False)
+            changeYourMoveText(player1, gameSocket, label, button, False)
+    else: 
+        player1.setLockMove(False)
+
 
 
 def setupPlayComponents(player1, gameSocket, root: Tk): 
@@ -92,11 +105,22 @@ def setupPlayComponents(player1, gameSocket, root: Tk):
 def playGame(player1, gameSocket, root: Tk): 
     setupPlayComponents(player1, gameSocket, root) 
 
-    # while True: 
-    #     # Waiting for Player2 Move 
-    #     if player1.getLockMove: 
-    #         Player2Move = gameSocket.recv(1024).decode('ascii')
-    #         player1.updateGameBoard(Player2Move, "Y")
+    # playing = True
+    # while playing: 
+        # Waiting for Player2 Move 
+    # print(player1.getLockMove())
+    # print("waiting...")
+        # try: 
+    # Player2Move = gameSocket.recv(1024).decode('ascii')
+    # player1.updateGameBoard(Player2Move, "Y")
+    # player1.setLockMove()
+    # changeYourMoveText(player1, gameSocket, label, button, False)
+    # playing = False
+        # except EOFError:
+        #     print("Connection closed")
+        #     break
+
+
 
 
 

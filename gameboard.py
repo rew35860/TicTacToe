@@ -19,6 +19,7 @@ class BoardClass:
 
         self.move = ""
         self.previousBtn = None 
+    
         self.lockMove = False
 
         self.allMoves = []
@@ -30,10 +31,15 @@ class BoardClass:
         return self.move 
 
 
+    def moveIsAvalible(self): 
+        return True if self.move not in self.allMoves else False
+
+
     def buttonClicked(self, button, name: str): 
+        print("in button")
         if not self.lockMove and name not in self.allMoves:
             print(button["text"])
-            if self.move != "" and self.move != name: 
+            if self.move != "" and self.move != name and self.move not in self.allMoves: 
                 self.previousBtn["text"] = ""
                 button["text"] = self.marker
                 self.previousBtn = button
@@ -44,8 +50,8 @@ class BoardClass:
                 self.move = name
 
 
-    def setLockMove(self):
-        self.lockMove = not self.lockMove
+    def setLockMove(self, lock: bool):
+        self.lockMove = lock
 
 
     def getLockMove(self): 

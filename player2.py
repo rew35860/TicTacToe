@@ -34,7 +34,7 @@ def changeYourMoveText(player2, gameSocket, label, button, isWaiting: bool):
     waitText = "Waiting for Player1's move"
 
     label.config(text = waitText if isWaiting else yourTurnText)
-    button.config(text = "" if isWaiting else "Send Your Move")
+    button.config(text = "Get Player1 Move" if isWaiting else "Send Your Move")
 
 
 def sendMoveAction(player2, gameSocket, label, button, isWaiting: bool): 
@@ -42,10 +42,16 @@ def sendMoveAction(player2, gameSocket, label, button, isWaiting: bool):
         player2Move = player2.getMove()
         gameSocket.sendall(player2Move.encode())
 
-        player2.setLockMove()
+        player2.setLockMove(True)
         player2.updateGameBoard(player2Move, "Y")
 
         changeYourMoveText(player2, gameSocket, label, button, isWaiting)
+    else: 
+        Player1Move = gameSocket.recv(1024).decode('ascii')
+        player2.updateGameBoard(Player1Move, "X")
+        
+        player2.setLockMove(False)
+        changeYourMoveText(player2, gameSocket, label, button, False)
 
 
 def setupPlayComponents(player2, gameSocket, root: Tk): 
@@ -64,6 +70,11 @@ def playGame(player2, gameSocket, root: Tk):
     setupPlayComponents(player2, gameSocket, root) 
 
     # while True: 
+    # print("waiting...")
+    # Player1Move = gameSocket.recv(1024).decode('ascii')
+    # player2.updateGameBoard(Player1Move, "X")
+    # player2.setLockMove()
+    # changeYourMoveText(player2, gameSocket, label, button, False)
 
 
 
@@ -92,6 +103,7 @@ def connectToPlayer1(root: Tk):
     player2 = BoardClass(root, "O", player1Username, player2Username, player2Username)
     player1Move = clientSocket.recv(1024).decode('ascii')
     player2.setupBoardGameGUI() 
+    print(player1Move)
     player2.updateGameBoard(player1Move, "X")
 
     # Play Game 
