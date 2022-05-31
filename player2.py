@@ -37,40 +37,27 @@ def changeYourMoveText(player2, gameSocket, label, button, isWaiting: bool):
     button.config(text = "Get Player1 Move" if isWaiting else "Send Your Move")
 
 
-def sendMoveAction(player2, gameSocket, label, button, isWaiting: bool): 
-    if not player2.getLockMove():
-        player2Move = player2.getMove()
-        gameSocket.sendall(player2Move.encode())
-
-        player2.setLockMove(True)
-        player2.updateGameBoard(player2Move, "Y")
-
-        changeYourMoveText(player2, gameSocket, label, button, isWaiting)
-    else: 
+def sendMoveAction(player2, gameSocket): 
+    if player2.getLockMove():
         Player1Move = gameSocket.recv(1024).decode('ascii')
         player2.updateGameBoard(Player1Move, "X")
         
         player2.setLockMove(False)
-        changeYourMoveText(player2, gameSocket, label, button, False)
 
 
 def setupPlayComponents(player2, gameSocket, root: Tk): 
-    l = Label(root, text = "It's your turn!")
-    l.config(font =("Courier", 14))
     sendMove = Button(root, text = "Send Your Move", 
                                                 command = lambda: 
-                                                sendMoveAction(player2, gameSocket, 
-                                                                                l, sendMove, True))
-
-    l.pack()
+                                                sendMoveAction(player2, gameSocket))
     sendMove.pack()
 
 
 def playGame(player2, gameSocket, root: Tk): 
-    setupPlayComponents(player2, gameSocket, root) 
+    # Player1Move = gameSocket.recv(1024).decode('ascii')
+    # setupPlayComponents(player2, gameSocket, root) 
 
     # while True: 
-    # print("waiting...")
+    print("waiting...")
     # Player1Move = gameSocket.recv(1024).decode('ascii')
     # player2.updateGameBoard(Player1Move, "X")
     # player2.setLockMove()
@@ -100,9 +87,10 @@ def connectToPlayer1(root: Tk):
     clientSocket.sendall(player2Username.encode())
 
     # Display Board Game with Player 1 move
-    player2 = BoardClass(root, "O", player1Username, player2Username, player2Username)
+    player2 = BoardClass(root, clientSocket, "O", player1Username, player2Username, player2Username)
     player1Move = clientSocket.recv(1024).decode('ascii')
     player2.setupBoardGameGUI() 
+    
     print(player1Move)
     player2.updateGameBoard(player1Move, "X")
 

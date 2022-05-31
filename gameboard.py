@@ -3,7 +3,7 @@ from tkinter import simpledialog
 
 
 class BoardClass: 
-    def __init__(self, root: Tk, marker: str, player1Name: str = "", player2Name: str = "", 
+    def __init__(self, root: Tk, gameSocket, marker: str, player1Name: str = "", player2Name: str = "", 
                                 lastPlayerName: str = "", numWins: int = 0, 
                                 numTies: int = 0, numlosses: int = 0):
         self.player1Name = player1Name 
@@ -15,10 +15,9 @@ class BoardClass:
         self.gamePlayed = 0 
         self.frame = root 
         
+        self.gameSocket = gameSocket
         self.marker = marker
-
         self.move = ""
-        self.previousBtn = None 
     
         self.lockMove = False
 
@@ -36,18 +35,13 @@ class BoardClass:
 
 
     def buttonClicked(self, button, name: str): 
-        print("in button")
         if not self.lockMove and name not in self.allMoves:
-            print(button["text"])
-            if self.move != "" and self.move != name and self.move not in self.allMoves: 
-                self.previousBtn["text"] = ""
-                button["text"] = self.marker
-                self.previousBtn = button
-                self.move = name
-            else: 
-                button["text"] = self.marker
-                self.previousBtn = button
-                self.move = name
+            button["text"] = self.marker
+            self.previousBtn = button
+            self.move = name
+            self.gameSocket.sendall(self.move.encode())
+            
+            self.setLockMove(True)
 
 
     def setLockMove(self, lock: bool):
@@ -59,6 +53,7 @@ class BoardClass:
 
 
     def setupBoardGameGUI(self): 
+        print("set up board game")
         # Creating a Frame as a container for buttons 
         boardGameViewRow1 = Frame(self.frame)
         boardGameViewRow1.pack()

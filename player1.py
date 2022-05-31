@@ -1,4 +1,5 @@
 from tkinter import * 
+from threading import *
 from tkinter import simpledialog
 from gameboard import BoardClass
 import socket
@@ -66,65 +67,39 @@ def changeYourMoveText(player1, gameSocket, label, button, isWaiting: bool):
     button.config(text = "Get Player2 move" if isWaiting else "Send Your Move")
 
 
-def sendMoveAction(player1, gameSocket, label, button, isWaiting: bool): 
-    if player1.moveIsAvalible():
-        print("move")
-        if not player1.getLockMove():
-            print("no move")
-            player1Move = player1.getMove()
-            gameSocket.sendall(player1Move.encode())
-
-            player1.setLockMove(True)
-            player1.updateGameBoard(player1Move, "X")
-
-            changeYourMoveText(player1, gameSocket, label, button, isWaiting)
-        else: 
-            print("?? move")
-            Player2Move = gameSocket.recv(1024).decode('ascii')
-            player1.updateGameBoard(Player2Move, "O")
-            
-            player1.setLockMove(False)
-            changeYourMoveText(player1, gameSocket, label, button, False)
-    else: 
+def sendMoveAction(player1, gameSocket, button, isWaiting: bool): 
+    if player1.getLockMove():
+        Player2Move = gameSocket.recv(1024).decode('ascii')
+        player1.updateGameBoard(Player2Move, "O")
+        
         player1.setLockMove(False)
 
 
-
 def setupPlayComponents(player1, gameSocket, root: Tk): 
-    l = Label(root, text = "It's your turn!")
-    l.config(font =("Courier", 14))
-    sendMove = Button(root, text = "Send Your Move", 
+    sendMove = Button(root, text = "Get Player2 Move", 
                                                 command = lambda: 
                                                 sendMoveAction(player1, gameSocket, 
-                                                                                l, sendMove, True))
-
-    l.pack()
+                                                                            sendMove, True))
     sendMove.pack()
 
 
 def playGame(player1, gameSocket, root: Tk): 
-    setupPlayComponents(player1, gameSocket, root) 
-
-    # playing = True
-    # while playing: 
-        # Waiting for Player2 Move 
-    # print(player1.getLockMove())
-    # print("waiting...")
-        # try: 
-    # Player2Move = gameSocket.recv(1024).decode('ascii')
-    # player1.updateGameBoard(Player2Move, "Y")
-    # player1.setLockMove()
-    # changeYourMoveText(player1, gameSocket, label, button, False)
-    # playing = False
-        # except EOFError:
-        #     print("Connection closed")
-        #     break
+    t1 = Thread(target = listeningForPlayer2(gameSocket))
+    t1.daemon = True
+    t1.start() 
+    print("work?")
 
 
-
-
-
-
+def listeningForPlayer2(gameSocket): 
+    # while True: 
+        # print("in listening 1")
+        # Player2Move = gameSocket.recv(1024).decode('ascii')
+        # print(Player2Move)
+        # if Player2Move != "": 
+        #     break 
+    for i in range(100):
+        # sleep(5)
+        print(i)
 
 
 def connectToPlayer2(root: Tk): 
@@ -145,11 +120,14 @@ def connectToPlayer2(root: Tk):
     diplayPlayer2Name(root, player2Username)
 
     # Display Board Game 
-    player1 = BoardClass(root, "X", player1Username, player2Username, player2Username)
+    player1 = BoardClass(root, gameSocket, "X", player1Username, player2Username, player2Username)
     player1.setupBoardGameGUI() 
 
     # Play Game 
     playGame(player1, gameSocket, root) 
+    # t1 = Thread(target = listeningForPlayer2(gameSocket))
+    # t1.daemon = True
+    # t1.start() 
 
     # except:
     #     player1TryConnect(root)
