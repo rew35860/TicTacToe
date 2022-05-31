@@ -4,6 +4,47 @@ from tkinter import simpledialog
 from gameboard import BoardClass
 import socket
 
+
+class ClientClass: 
+    def __init__(self, server): 
+        # Creating Server 
+        self.gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = server
+    
+    def connect(self):
+        # Wait for Player2 connection
+        self.gameSocket.connect((self.server[0], self.server[1]))
+        print("Successfully Connected to Player2")
+
+    def getData(self) -> str: 
+        resp = self.gameSocket.recv(1024).decode('ascii')
+        print("Receive data from Player2")
+        return resp
+    
+    def sendData(self, data): 
+        self.gameSocket.sendall(data.encode())
+        print("Send data to Player2")
+
+
+def player1Thread(target, args):
+    t1 = Thread(target = target, args = args)
+    t1.daemon = True
+    t1.start() 
+
+
+def setUpConnection(c, root):
+    # Establish connection with Player2 
+    c.connect()
+    
+    # Send Player 1 username to Player 2 
+    player1Username = setPlayer1Name() 
+    c.sendData(player1Username)
+
+    # Display Player2 username 
+    player2Username = c.getData()
+    diplayPlayer2Name(root, player2Username)
+
+
 def setPlayer1Server() -> (str, int): 
     """ Ask Player1 about Player2 host information.
 
@@ -54,7 +95,7 @@ def clearFrame(root: Tk):
 
 
 def diplayPlayer2Name(root: Tk, name: str): 
-    l = Label(root, text = "Player2 Name: "+name)
+    l = Label(root, text = "Player2's username: "+name)
     l.config(font =("Courier", 14))
     l.pack()
 
@@ -84,9 +125,9 @@ def setupPlayComponents(player1, gameSocket, root: Tk):
 
 
 def playGame(player1, gameSocket, root: Tk): 
-    t1 = Thread(target = listeningForPlayer2(gameSocket))
-    t1.daemon = True
-    t1.start() 
+    # t1 = Thread(target = listeningForPlayer2(gameSocket))
+    # t1.daemon = True
+    # t1.start() 
     print("work?")
 
 
@@ -102,25 +143,17 @@ def listeningForPlayer2(gameSocket):
         print(i)
 
 
-def connectToPlayer2(root: Tk): 
+def Player1Manager(root: Tk): 
     clearFrame(root)
 
     # try:
     # Connecting to Player 2 
     server = setPlayer1Server() 
-    gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    gameSocket.connect((server[0], server[1]))
-
-    # Send Player 1 username to Player 2 
-    player1Username = setPlayer1Name() 
-    gameSocket.sendall(player1Username.encode())
-
-    # Receive Player 2 username 
-    player2Username = gameSocket.recv(1024).decode('ascii')
-    diplayPlayer2Name(root, player2Username)
+    c = ClientClass(server)
+    setUpConnection(c, root)
 
     # Display Board Game 
-    player1 = BoardClass(root, gameSocket, "X", player1Username, player2Username, player2Username)
+    player1 = BoardClass(root, c, "X", player1Username, player2Username, player2Username)
     player1.setupBoardGameGUI() 
 
     # Play Game 
@@ -135,12 +168,13 @@ def connectToPlayer2(root: Tk):
     # finally: 
     #     gameSocket.close()
 
+
 def setupPlayer1GUI(): 
     frame = Tk()
     frame.title("Player 1")
     frame.geometry('500x500')
 
-    connectToPlayer2(frame)
+    Player1Manager(frame)
 
     frame.mainloop()
 

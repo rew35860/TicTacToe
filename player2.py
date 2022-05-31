@@ -1,7 +1,59 @@
 from tkinter import *
+from threading import *
 from tkinter import simpledialog
 from gameboard import BoardClass
 import socket
+
+class ServerClass: 
+    def __init__(self, server): 
+        # Creating Server 
+        self.gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.gameSocket.bind((server[0], server[1]))
+        self.clientSocket = None
+        self.clientAddress = None
+    
+    def connect(self):
+        # Wait for Player 1 connection
+        self.gameSocket.listen(1024)
+        self.clientSocket, self.clientAddress = self.gameSocket.accept()
+        print("Successfully Connected to Player1")
+
+    def getData(self) -> str: 
+        resp = self.clientSocket.recv(1024).decode('ascii')
+        print("Receive data from Player1")
+        return resp
+    
+    def sendData(self, data): 
+        self.clientSocket.sendall(data.encode())
+        print("Send data to Player2")
+
+
+def player2Thread(target, args):
+    t1 = Thread(target = target, args = args)
+    t1.daemon = True
+    t1.start() 
+
+
+def setupPlayer2(s, root):
+    # setup connection
+    # Establish connection with Player1 and receive Player1 username
+    s.connect()
+    player1Username = s.getData()
+
+    # Display Player1 username 
+    clearFrame(root)
+    diplayPlayer1Name(root, player1Username)
+
+    # Create and send player2 username 
+    player2Username = setPlayer2Name() 
+    s.sendData(player2Username)
+
+    # setup board game
+    player2 = BoardClass(root, s, "O", player1Username, player2Username, player2Username)
+    player1Move = s.getData()
+
+    player2.setupBoardGameGUI() 
+    player2.updateGameBoard(player1Move, "X")
 
 
 def setPlayer2Server() -> (str, int): 
@@ -24,9 +76,29 @@ def clearFrame(root: Tk):
     
 
 def diplayPlayer1Name(root: Tk, name: str): 
-    l = Label(root, text = "Player1 Name: "+name)
+    l = Label(root, text = "Player1's username: "+name)
     l.config(font =("Courier", 14))
     l.pack()
+
+
+def displayWaitingScreen(root: Tk):
+    canvas = Canvas(root)
+    canvas.pack()
+
+    canvasText = canvas.create_text(150, 120, text='')
+
+    staticString = "Waiting for Player1"
+    animatedString = "........."
+
+    #Time delay between chars, in milliseconds
+    delta = 500 
+    delay = 0
+
+    for i in range(len(animatedString) + 1):
+        s = animatedString[:i]
+        updateText = lambda s = s: canvas.itemconfigure(canvasText, text=staticString+s)
+        canvas.after(delay, updateText)
+        delay += delta
 
 
 def changeYourMoveText(player2, gameSocket, label, button, isWaiting: bool): 
@@ -65,41 +137,29 @@ def playGame(player2, gameSocket, root: Tk):
 
 
 
-def connectToPlayer1(root: Tk): 
+def player2Manager(root: Tk): 
     clearFrame(root)
     
-    # Player 2 provides host information including: 
-    # host name, port number, thier username 
     server = setPlayer2Server() 
-    gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    gameSocket.bind((server[0], server[1]))
+    s = ServerClass(server)
 
-    # Wait for Player 1 connection
-    gameSocket.listen(1024)
-    clientSocket, clientAddress = gameSocket.accept()
-
-    # Receive player1 username 
-    player1Username= clientSocket.recv(1024).decode('ascii')
-    diplayPlayer1Name(root, player1Username)
-
-    # Create and send player2 username 
-    player2Username = setPlayer2Name() 
-    clientSocket.sendall(player2Username.encode())
+    player2Thread(setupPlayer2, (s, root, ))
+    displayWaitingScreen(root)
 
     # Display Board Game with Player 1 move
-    player2 = BoardClass(root, clientSocket, "O", player1Username, player2Username, player2Username)
-    player1Move = clientSocket.recv(1024).decode('ascii')
-    player2.setupBoardGameGUI() 
-    
-    print(player1Move)
-    player2.updateGameBoard(player1Move, "X")
+    # player2 = BoardClass(root, clientSocket, "O", player1Username, player2Username, player2Username)
+    # player1Move = clientSocket.recv(1024).decode('ascii')
+    # player2.setupBoardGameGUI() 
 
-    # Play Game 
-    playGame(player2, clientSocket, root) 
+    # print(player1Move)
+    # player2.updateGameBoard(player1Move, "X")
+
+    # # Play Game 
+    # playGame(player2, clientSocket, root) 
     
-    # Closing Connection
-    # clientSocket.close()
-    # gameSocket.close()
+    # # Closing Connection
+    # # clientSocket.close()
+    # # gameSocket.close()
 
 
 def setupPlayer2GUI(): 
@@ -107,7 +167,7 @@ def setupPlayer2GUI():
     frame.title("Player 2")
     frame.geometry('500x500')
 
-    connectToPlayer1(frame) 
+    player2Manager(frame) 
 
     frame.mainloop()
 

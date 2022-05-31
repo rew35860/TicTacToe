@@ -39,7 +39,7 @@ class BoardClass:
             button["text"] = self.marker
             self.previousBtn = button
             self.move = name
-            self.gameSocket.sendall(self.move.encode())
+            self.gameSocket.sendData(self.move)
             
             self.setLockMove(True)
 
