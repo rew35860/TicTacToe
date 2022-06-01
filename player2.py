@@ -28,26 +28,67 @@ class ServerClass:
         print("Send data to Player2")
 
 
-def player2Thread(target, args):
+def player2Thread(target, args) -> Thread:
     t1 = Thread(target = target, args = args)
     t1.daemon = True
     t1.start() 
+    return t1 
 
 
-def setupPlayer2(s, root):
-    # setup connection
-    # Establish connection with Player1 and receive Player1 username
+def askHostInfo() -> (str, int): 
+    hostNameAnswer = simpledialog.askstring("HostName", "Enter host name/IP address of Player 2")
+    portAnswer = simpledialog.askinteger("Player 2 Port", "Enter Player 2's Port")
+
+    return (hostNameAnswer, portAnswer)
+
+
+def setupPlayer2Connection() -> ServerClass:
+    
+    # Ask the host information
+    server = askHostInfo() 
+    s = ServerClass(server)
+
+    # Establish connection with Player1
     s.connect()
-    player1Username = s.getData()
+    return s
 
-    # Display Player1 username 
-    clearFrame(root)
+
+def diplayPlayer1Name(root: Tk, name: str): 
+    headerView = Frame(root)
+    headerView.pack()
+
+    l1 = Label(headerView, text = "Player1's username: "+name)
+    l1.config(font =("Courier", 14))
+    l1.pack()
+
+    l2 = Label(headerView, text = "Turn: Opponent")
+    l2.config(font =("Courier", 14))
+    l2.pack()
+
+
+def getPlayer1Username(s, root: Tk) -> str: 
+    player1Username = s.getData() 
     diplayPlayer1Name(root, player1Username)
 
-    # Create and send player2 username 
-    player2Username = setPlayer2Name() 
-    s.sendData(player2Username)
+    return player1Username
 
+
+def setPlayer2Username() -> str: 
+    name = simpledialog.askstring("Player 2 Username", "Enter your alphanumeric Username")
+    while not(name.isalnum()):
+       name = simpledialog.askstring("Player 2 Username", "Username must be alphanumeric, please try again!")
+    return name
+
+
+def sendPlayer2Username(s) -> str: 
+    # Create and send player2 username 
+    player2Username = setPlayer2Username()
+    s.sendData(player2Username)
+    
+    return player2Username
+
+
+def setupPlayer2BoardGame(s, root, player1Username, player2Username) -> BoardClass:
     # setup board game
     player2 = BoardClass(root, s, "O", player1Username, player2Username, player2Username)
     player1Move = s.getData()
@@ -55,107 +96,49 @@ def setupPlayer2(s, root):
     player2.setupBoardGameGUI() 
     player2.updateGameBoard(player1Move, "X")
 
-
-def setPlayer2Server() -> (str, int): 
-    hostNameAnswer = simpledialog.askstring("HostName", "Enter host name/IP address of Player 2")
-    portAnswer = simpledialog.askinteger("Player 2 Port", "Enter Player 2's Port")
-
-    return (hostNameAnswer, portAnswer)
-
-
-def setPlayer2Name() -> str: 
-    name = simpledialog.askstring("Player 2 Username", "Enter your alphanumeric Username")
-    while not(name.isalnum()):
-       name = simpledialog.askstring("Player 2 Username", "Username must be alphanumeric, please try again!")
-    return name
+    return player2
 
 
 def clearFrame(root: Tk): 
     for widget in root.winfo_children():
         widget.destroy()
-    
-
-def diplayPlayer1Name(root: Tk, name: str): 
-    l = Label(root, text = "Player1's username: "+name)
-    l.config(font =("Courier", 14))
-    l.pack()
 
 
-def displayWaitingScreen(root: Tk):
-    canvas = Canvas(root)
-    canvas.pack()
-
-    canvasText = canvas.create_text(150, 120, text='')
-
-    staticString = "Waiting for Player1"
-    animatedString = "........."
-
-    #Time delay between chars, in milliseconds
-    delta = 500 
-    delay = 0
-
-    for i in range(len(animatedString) + 1):
-        s = animatedString[:i]
-        updateText = lambda s = s: canvas.itemconfigure(canvasText, text=staticString+s)
-        canvas.after(delay, updateText)
-        delay += delta
+def checkForGameOver(player2) -> bool: 
+    if player2.isWinner() or player2.boardIsFull():
+        return True
+    return False
 
 
-def changeYourMoveText(player2, gameSocket, label, button, isWaiting: bool): 
-    yourTurnText = "It's your turn!"
-    waitText = "Waiting for Player1's move"
-
-    label.config(text = waitText if isWaiting else yourTurnText)
-    button.config(text = "Get Player1 Move" if isWaiting else "Send Your Move")
-
-
-def sendMoveAction(player2, gameSocket): 
-    if player2.getLockMove():
-        Player1Move = gameSocket.recv(1024).decode('ascii')
+def waitingForMove(player2, s, root: Tk): 
+    while True: 
+        Player1Move = s.getData()
         player2.updateGameBoard(Player1Move, "X")
-        
         player2.setLockMove(False)
 
-
-def setupPlayComponents(player2, gameSocket, root: Tk): 
-    sendMove = Button(root, text = "Send Your Move", 
-                                                command = lambda: 
-                                                sendMoveAction(player2, gameSocket))
-    sendMove.pack()
-
-
-def playGame(player2, gameSocket, root: Tk): 
-    # Player1Move = gameSocket.recv(1024).decode('ascii')
-    # setupPlayComponents(player2, gameSocket, root) 
-
-    # while True: 
-    print("waiting...")
-    # Player1Move = gameSocket.recv(1024).decode('ascii')
-    # player2.updateGameBoard(Player1Move, "X")
-    # player2.setLockMove()
-    # changeYourMoveText(player2, gameSocket, label, button, False)
-
+        if checkForGameOver(player2):
+            player2.setLockMove(True)
+            player1PlayAgain(player1, c, root)
+            continue
 
 
 def player2Manager(root: Tk): 
     clearFrame(root)
     
-    server = setPlayer2Server() 
-    s = ServerClass(server)
+    # Player 2 Module Part 1 & 2 
+    s = setupPlayer2Connection()
 
-    player2Thread(setupPlayer2, (s, root, ))
-    displayWaitingScreen(root)
+    # Player 2 Module Part 3
+    player1Username = getPlayer1Username(s, root)
 
-    # Display Board Game with Player 1 move
-    # player2 = BoardClass(root, clientSocket, "O", player1Username, player2Username, player2Username)
-    # player1Move = clientSocket.recv(1024).decode('ascii')
-    # player2.setupBoardGameGUI() 
+    # Player 2 Module Part 4.0
+    player2Username = sendPlayer2Username(s)
 
-    # print(player1Move)
-    # player2.updateGameBoard(player1Move, "X")
+    # Player 2 Module Part 4.1 
+    player2 = setupPlayer2BoardGame(s, root, player1Username, player2Username)
+    player2.updateGamesPlayed()
 
-    # # Play Game 
-    # playGame(player2, clientSocket, root) 
+    player2Thread(waitingForMove, (player2, s, root, ))
     
     # # Closing Connection
     # # clientSocket.close()

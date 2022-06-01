@@ -48,10 +48,6 @@ class BoardClass:
         self.lockMove = lock
 
 
-    def getLockMove(self): 
-        return self.lockMove 
-
-
     def setupBoardGameGUI(self): 
         print("set up board game")
         # Creating a Frame as a container for buttons 
@@ -129,3 +125,73 @@ class BoardClass:
                     self.board[2][i-6] = marker
                 
                 self.buttonBoard[i]["text"] = marker if self.buttonBoard[i]["text"] == "" else self.buttonBoard[i]["text"]
+
+
+    def isWinner(self) -> bool: 
+        for i in range(3):
+            # Check horizontal
+            if self.board[i][0] == self.board[i][1] == self.board[i][2] \
+                and self.board[i][0] != " ":
+                
+                print("1")
+                if self.board[i][0] == self.marker:
+                    print("1.2")
+                    self.numWins += 1
+                else: 
+                    print("1.3")
+                    self.numlosses += 1 
+                return True
+            
+            # Check vertical
+            if self.board[0][i] == self.board[1][i] == self.board[2][i] \
+                and self.board[0][i] != " ":
+                
+                print("2")
+                if self.board[0][i] == self.marker:
+                    print("2.2")
+                    self.numWins += 1
+                else: 
+                    print("2.3")
+                    self.numlosses += 1 
+                return True
+            
+            # Check diagonals
+            if self.board[0][0] == self.board[1][1] == self.board[2][2] \
+                and self.board[0][0] != " ":
+                
+                print("3")
+                if self.board[0][0] == self.marker:
+                    print("3.2")
+                    self.numWins += 1
+                else: 
+                    print("3.3")
+                    self.numlosses += 1 
+                return True
+            
+            if self.board[2][0] == self.board[1][1] == self.board[0][2] \
+                and self.board[2][0] != " ":
+                
+                print("4")
+                if self.board[2][0] == self.marker:
+                    print("4.1")
+                    self.numWins += 1
+                else: 
+                    print("4.2")
+                    self.numlosses += 1 
+                return True
+        
+        return False
+
+
+    def boardIsFull(self) -> bool: 
+        if " " not in self.board[0] and " " not in self.board[1] and " " not in self.board[2]:
+            self.numTies += 1 
+            return True
+        else:
+            return False
+        
+
+    def computeStats(self) -> str: 
+        # text = "Game Played: {}\nNumber of Wins: {}\nNumber of Ties: {}\nNumber of Losses: {}\n".format()
+        return (self.player1Name, self.player2Name, self.gamePlayed, self.numWins, self.numlosses, self.numTies)
+
