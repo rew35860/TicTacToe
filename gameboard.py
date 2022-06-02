@@ -3,7 +3,7 @@ from tkinter import simpledialog
 
 
 class BoardClass: 
-    def __init__(self, root: Tk, gameSocket, marker: str, player1Name: str = "", player2Name: str = "", 
+    def __init__(self, root: Tk, gameSocket, marker: str, turnBtn, player1Name: str = "", player2Name: str = "", 
                                 lastPlayerName: str = "", numWins: int = 0, 
                                 numTies: int = 0, numlosses: int = 0):
         self.player1Name = player1Name 
@@ -14,7 +14,8 @@ class BoardClass:
         self.numlosses = numlosses
         self.gamePlayed = 0 
         self.frame = root 
-        
+        self.turnBtn = turnBtn
+
         self.gameSocket = gameSocket
         self.marker = marker
         self.move = ""
@@ -26,12 +27,27 @@ class BoardClass:
         self.buttonBoard = [' ',' ',' ',' ',' ',' ',' ',' ',' ']
 
 
+    def setLastPlayer(self, name): 
+        self.lastPlayerName = name 
+    
+
+    def getLastPlayer(self, name): 
+        return self.lastPlayerName 
+
+
     def getMove(self): 
         return self.move 
 
 
-    def moveIsAvalible(self): 
-        return True if self.move not in self.allMoves else False
+    def setLockMove(self, lock: bool):
+        self.lockMove = lock
+
+
+    def checkForGameOver(self) -> bool: 
+        if self.isWinner() or self.boardIsFull():
+            self.turnBtn.config(text = "Turn: Game Over")
+            return True
+        return False
 
 
     def buttonClicked(self, button, name: str): 
@@ -40,12 +56,12 @@ class BoardClass:
             self.previousBtn = button
             self.move = name
             self.gameSocket.sendData(self.move)
-            
+            self.turnBtn.config(text = "Turn: Opponent")
+
+            self.updateGameBoard(name, self.marker)
             self.setLockMove(True)
 
-
-    def setLockMove(self, lock: bool):
-        self.lockMove = lock
+            self.checkForGameOver()
 
 
     def setupBoardGameGUI(self): 
@@ -108,6 +124,8 @@ class BoardClass:
 
     def resetGameBoard(self):
         self.board = [[' ',' ',' '],[' ',' ',' '],[' ',' ',' ']]
+        self.allMoves.clear()
+
         for i in self.buttonBoard:
             i["text"] = ""
 
@@ -192,6 +210,5 @@ class BoardClass:
         
 
     def computeStats(self) -> str: 
-        # text = "Game Played: {}\nNumber of Wins: {}\nNumber of Ties: {}\nNumber of Losses: {}\n".format()
         return (self.player1Name, self.player2Name, self.gamePlayed, self.numWins, self.numlosses, self.numTies)
 

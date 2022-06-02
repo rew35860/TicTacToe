@@ -10,26 +10,39 @@ class ClientClass:
         # Creating Server 
         self.gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server = server
+        self.endProgram = False
     
+    def setServer(self, server): 
+        self.server = server
+
     def connect(self):
         # Wait for Player2 connection
         self.gameSocket.connect((self.server[0], self.server[1]))
         print("Successfully Connected to Player2")
 
+    def closeConnection(self): 
+        self.gameSocket.close() 
+        print("Successfully Closed Connection with Player2")
+
     def getData(self) -> str: 
         resp = self.gameSocket.recv(1024).decode('ascii')
-        print("Receive data from Player2")
+        print("Receive Data from Player2")
         return resp
     
     def sendData(self, data): 
         self.gameSocket.sendall(data.encode())
-        print("Send data to Player2")
+        print("Send Data to Player2")
+    
+    def playerThread(self, target, args):
+        t1 = Thread(target = target, args = args)
+        t1.daemon = True
+        t1.start() 
+    
+    def setEndProgram(self, flag: bool) -> bool: 
+        self.endProgram = flag 
 
-
-def player1Thread(target, args):
-    t1 = Thread(target = target, args = args)
-    t1.daemon = True
-    t1.start() 
+    def getEndProgram(self) -> bool:
+        self.endProgram
 
 
 def askHostInfo() -> (str, int): 
@@ -58,9 +71,9 @@ def setupPlayer1Connection(c, root: Tk) -> (str, str):
 
     # Display Player2 username 
     player2Username = c.getData()
-    diplayPlayer2Name(root, player2Username)
+    turnBtn = diplayPlayer2Name(root, player2Username)
 
-    return (player1Username, player2Username)
+    return (player1Username, player2Username, turnBtn)
 
 
 def setPlayer1Name() -> str: 
@@ -78,28 +91,35 @@ def setPlayer1Name() -> str:
     return name
 
 
+def closePlayer1Connection(c, root: Tk):
+    root.destroy
+    c.closeConnection()
+
+
 def player1TryConnect(c, root: Tk): 
- 
     l = Label(root, text = "Would you like to try reconecting?")
     l.config(font =("Courier", 14))
     
-    yestBtn = Button(root, text = "Yes", command = lambda: setupPlayer1Connection(c, root) )
-    noBtn = Button(root, text = "No", command = root.destroy)
+    yestBtn = Button(root, text = "Yes", command = lambda: player1Manager(root))
+    noBtn = Button(root, text = "No", command = lambda: closePlayer1Connection(c, root))
     
     l.pack()
     yestBtn.pack()
     noBtn.pack()
 
 
-def sendPlayAgain(player1, c, askView): 
+def sendPlayAgain(player1, c, root:Tk, askView, turnBtn): 
     askView.destroy()
     player1.updateGamesPlayed()
     player1.resetGameBoard()
-    player1.setLockMove(True)
+    player1.setLockMove(False)
+    
     c.sendData("Play Again")
+    turnBtn.config(text = "Turn: You")
+    c.playerThread(playGame, (player1, c, root, turnBtn, ))
 
 
-def sendExit(player1, c, root: Tk): 
+def displayStat(player1, c, root: Tk): 
     clearFrame(root)
 
     (player1Name, player2Name, gamePlayed, numWins, numLosses, numTies) = player1.computeStats()
@@ -119,17 +139,19 @@ def sendExit(player1, c, root: Tk):
     l4.pack()
     l5.pack()
     c.sendData("Fun Times")
+    c.setEndProgram(True)
+    c.closeConnection()
 
 
-def player1PlayAgain(player1, c, root: Tk): 
+def askToPlayAgain(player1, c, root: Tk, turnBtn): 
     askView = Frame(root)
     askView.pack()
 
     l = Label(askView, text = "Would you like to play again?")
     l.config(font =("Courier", 14))
     
-    yestBtn = Button(askView, text = "Yes", command = lambda: sendPlayAgain(player1, c, askView))
-    noBtn = Button(askView, text = "No", command = lambda: sendExit(player1, c, root))
+    yestBtn = Button(askView, text = "Yes", command = lambda: sendPlayAgain(player1, c, root, askView, turnBtn))
+    noBtn = Button(askView, text = "No", command = lambda: displayStat(player1, c, root))
     
     l.pack()
     yestBtn.pack()
@@ -153,63 +175,58 @@ def diplayPlayer2Name(root: Tk, name: str):
     l2.config(font =("Courier", 14))
     l2.pack()
 
-
-def checkForGameOver(player1) -> bool: 
-    if player1.isWinner() or player1.boardIsFull():
-        return True
-    return False
+    return l2
 
 
-def waitingForMove(player1, c, root: Tk): 
+def playGame(player1, c, root: Tk, turnBtn): 
     while True: 
-        Player2Move = c.getData()
-        player1.updateGameBoard(Player2Move, "O")
+        player2Move = c.getData()
+        player1.updateGameBoard(player2Move, "O")
         player1.setLockMove(False)
+        turnBtn.config(text = "Turn: You")
 
-        if checkForGameOver(player1):
+        if player2Move == "Game Over" or player1.checkForGameOver():
             player1.setLockMove(True)
-            player1PlayAgain(player1, c, root)
-            continue
+            turnBtn.config(text = "Turn: Game Over")
+            askToPlayAgain(player1, c, root, turnBtn)
+            break
 
 
-
-def Player1Manager(root: Tk): 
+def player1Manager(root: Tk): 
     clearFrame(root)
 
-    # try:
-    # Player 1 Module Part 1 
-    server = askHostInfo() 
+    try:
+        # Player 1 Module Part 1 
+        server = askHostInfo() 
 
-    # Player 1 Module Part 2.0-2.1
-    c = ClientClass(server)
-    player1Username, player2Username = setupPlayer1Connection(c, root)
+        # Player 1 Module Part 2.0-2.1
+        c = ClientClass(server)
+        player1Username, player2Username, turnBtn = setupPlayer1Connection(c, root)
 
-    # Player 1 Module Part 3
-    # Display Board Game 
-    player1 = BoardClass(root, c, "X", player1Username, player2Username, player2Username)
-    player1.setupBoardGameGUI() 
-    player1.updateGamesPlayed() 
+        # Player 1 Module Part 3
+        # Display Board Game 
+        player1 = BoardClass(root, c, "X", turnBtn, player1Username, player2Username, player2Username)
+        player1.setupBoardGameGUI() 
+        player1.updateGamesPlayed() 
 
-    player1Thread(waitingForMove, (player1, c, root, ))
+        # Playing the game
+        c.playerThread(playGame, (player1, c, root, turnBtn))
 
-    # except:
-    # # Player 1 Module Part 2.2
-    #     player1TryConnect(root)
-
-    # finally: 
-    #     gameSocket.close()
+    except:
+        # Player 1 Module Part 2.2
+        player1TryConnect(c, root)
 
 
-def setupPlayer1GUI(): 
+def setupPlayer1Game(): 
     frame = Tk()
     frame.title("Player 1")
     frame.geometry('500x500')
 
-    Player1Manager(frame)
+    player1Manager(frame)
 
     frame.mainloop()
 
 
 
 if __name__ == '__main__':
-    setupPlayer1GUI()
+    setupPlayer1Game()

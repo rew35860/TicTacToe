@@ -18,6 +18,11 @@ class ServerClass:
         self.clientSocket, self.clientAddress = self.gameSocket.accept()
         print("Successfully Connected to Player1")
 
+    def closeConnection(self):
+        self.clientSocket.close()
+        self.gameSocket.close()
+        print("Successfully Closed Connection with Player1")
+
     def getData(self) -> str: 
         resp = self.clientSocket.recv(1024).decode('ascii')
         print("Receive data from Player1")
@@ -27,12 +32,11 @@ class ServerClass:
         self.clientSocket.sendall(data.encode())
         print("Send data to Player2")
 
-
-def player2Thread(target, args) -> Thread:
-    t1 = Thread(target = target, args = args)
-    t1.daemon = True
-    t1.start() 
-    return t1 
+    def playerThread(self, target, args) -> Thread:
+        t1 = Thread(target = target, args = args)
+        t1.daemon = True
+        t1.start() 
+        return t1 
 
 
 def askHostInfo() -> (str, int): 
@@ -65,12 +69,14 @@ def diplayPlayer1Name(root: Tk, name: str):
     l2.config(font =("Courier", 14))
     l2.pack()
 
+    return l2
+
 
 def getPlayer1Username(s, root: Tk) -> str: 
     player1Username = s.getData() 
-    diplayPlayer1Name(root, player1Username)
+    turnBtn = diplayPlayer1Name(root, player1Username)
 
-    return player1Username
+    return player1Username, turnBtn
 
 
 def setPlayer2Username() -> str: 
@@ -88,15 +94,37 @@ def sendPlayer2Username(s) -> str:
     return player2Username
 
 
-def setupPlayer2BoardGame(s, root, player1Username, player2Username) -> BoardClass:
+def setupPlayer2BoardGame(s, root: Tk, turnBtn, player1Username, player2Username) -> BoardClass:
     # setup board game
-    player2 = BoardClass(root, s, "O", player1Username, player2Username, player2Username)
+    player2 = BoardClass(root, s, "O", turnBtn, player1Username, player2Username, player2Username)
     player1Move = s.getData()
+    turnBtn.config(text = "Turn: You")
 
     player2.setupBoardGameGUI() 
     player2.updateGameBoard(player1Move, "X")
 
     return player2
+
+
+def displayStat(player2, root: Tk): 
+    clearFrame(root)
+
+    (player1Name, player2Name, gamePlayed, numWins, numLosses, numTies) = player2.computeStats()
+
+    statView = Frame(root, bg = "yellow")
+    statView.pack()
+
+    l1 = Label(statView, bg = "yellow", text = "Player 2: "+player2Name)
+    l2 = Label(statView, bg = "yellow", text = "Game Played: "+ str(gamePlayed))
+    l3 = Label(statView, bg = "yellow", text = "Number of Wins: "+ str(numWins))
+    l4 = Label(statView, bg = "yellow", text = "Number of Losses: "+ str(numLosses))
+    l5 = Label(statView, bg = "yellow", text = "Number of Ties: "+ str(numTies))
+
+    l1.pack()
+    l2.pack()
+    l3.pack()
+    l4.pack()
+    l5.pack()
 
 
 def clearFrame(root: Tk): 
@@ -110,15 +138,32 @@ def checkForGameOver(player2) -> bool:
     return False
 
 
-def waitingForMove(player2, s, root: Tk): 
+def playGame(player2, s, root: Tk, turnBtn): 
     while True: 
-        Player1Move = s.getData()
-        player2.updateGameBoard(Player1Move, "X")
-        player2.setLockMove(False)
+        player1Move = s.getData()
 
-        if checkForGameOver(player2):
+        if player1Move == "Play Again": 
+            player2.updateGamesPlayed()
+            player2.resetGameBoard()
+            turnBtn.config(text = "Turn: Opponent")
             player2.setLockMove(True)
-            player1PlayAgain(player1, c, root)
+
+        elif player1Move == "Fun Times": 
+            displayStat(player2, root)
+            
+            # Closing Connection
+            s.closeConnection()
+            break
+
+        else: 
+            player2.updateGameBoard(player1Move, "X")
+            player2.setLockMove(False)
+            turnBtn.config(text = "Turn: You")
+
+        if player2.checkForGameOver():
+            turnBtn.config(text = "Turn: Game Over")
+            player2.setLockMove(True)
+            s.sendData("Game Over")
             continue
 
 
@@ -129,23 +174,19 @@ def player2Manager(root: Tk):
     s = setupPlayer2Connection()
 
     # Player 2 Module Part 3
-    player1Username = getPlayer1Username(s, root)
+    player1Username, turnBtn = getPlayer1Username(s, root)
 
     # Player 2 Module Part 4.0
     player2Username = sendPlayer2Username(s)
 
     # Player 2 Module Part 4.1 
-    player2 = setupPlayer2BoardGame(s, root, player1Username, player2Username)
+    player2 = setupPlayer2BoardGame(s, root, turnBtn, player1Username, player2Username)
     player2.updateGamesPlayed()
 
-    player2Thread(waitingForMove, (player2, s, root, ))
-    
-    # # Closing Connection
-    # # clientSocket.close()
-    # # gameSocket.close()
+    s.playerThread(playGame, (player2, s, root, turnBtn, ))
 
 
-def setupPlayer2GUI(): 
+def setupPlayer2Game(): 
     frame = Tk()
     frame.title("Player 2")
     frame.geometry('500x500')
@@ -157,4 +198,4 @@ def setupPlayer2GUI():
 
 
 if __name__ == '__main__':
-    setupPlayer2GUI()
+    setupPlayer2Game()
