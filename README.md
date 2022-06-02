@@ -1,6 +1,6 @@
 # TicTacToe
 
-Using TKinter, socket, and threading to create the game Tic Tac Toe 
+Using tkinter, socket, and threading to create the game Tic Tac Toe 
 
 Requirement
 --------------------
