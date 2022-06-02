@@ -3,6 +3,67 @@ from tkinter import simpledialog
 
 
 class BoardClass: 
+    """
+    A class for tic tac toe game
+
+    Attributes
+    ----------
+    root (Tk): tkinter main frame for adding GUI components 
+    gameSocket: dealing with socket call to send move 
+    marker (str): indicating X/O 
+    turnBtn: indicating player turn 
+    player1Name (str): player1 username
+    player2Name (str): player2 username 
+    lastPlayerName (str): last player name 
+    numWins (int):  number of wins 
+    numTies (int):  number of ties
+    numlosses (int):  number of losses
+    lockMove(bool): flag when to disable button click 
+    allMoves(Array): store all the moves in the board 
+    board: store all the moves in the board in 2D array 
+    buttonBoard:  store all the buttons 
+
+    Methods
+    -------
+    getMove()
+        get function for move 
+    
+    setLockMove()
+        setter for lockMove
+    
+    checkForGameOver()
+        calling isWinner and boardIsFull functions to check if game is over 
+
+    buttonClicked()
+        send a move through socket call that the player clicked 
+    
+    updateGamesPlayed()
+        keeps track how many games have started
+    
+    resetGameBoard()
+        clear all the moves from game board
+    
+    updateGameBoard()
+        updates the game board with the player's move
+    
+    isWinner()
+        checks if the latest move resulted in a win
+        updates the wins and losses count 
+    
+    boardIsFull()
+        checks if the board is full (I.e. no more moves to make - tie)
+        updates the ties count
+    
+    computeStats()
+        computes and returns the following stats:
+            The username of both players
+            The number of games
+            The number of wins
+            The number of losses
+            The number of ties
+    """
+
+
     def __init__(self, root: Tk, gameSocket, marker: str, turnBtn, player1Name: str = "", player2Name: str = "", 
                                 lastPlayerName: str = "", numWins: int = 0, 
                                 numTies: int = 0, numlosses: int = 0):
@@ -25,14 +86,6 @@ class BoardClass:
         self.allMoves = []
         self.board = [[' ',' ',' '],[' ',' ',' '],[' ',' ',' ']]
         self.buttonBoard = [' ',' ',' ',' ',' ',' ',' ',' ',' ']
-
-
-    def setLastPlayer(self, name): 
-        self.lastPlayerName = name 
-    
-
-    def getLastPlayer(self, name): 
-        return self.lastPlayerName 
 
 
     def getMove(self): 

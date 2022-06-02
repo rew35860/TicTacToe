@@ -5,6 +5,36 @@ from gameboard import BoardClass
 import socket
 
 class ServerClass: 
+    """
+    A class for main server
+
+    Attributes
+    ----------
+    gameSocket : socket 
+        creating socket 
+    clientSocket : socket 
+        socket to communicate with the client (Player1)
+    clientAddress : socket 
+        client ip address 
+
+    Methods
+    -------
+    connect()
+        connect main server to a client server 
+    
+    closeConnection() 
+        close server connection 
+    
+    getData() 
+        get data from the client 
+
+    sendData()
+        send data to the client
+    
+    playerThread() 
+        create and start thread 
+    """
+
     def __init__(self, server): 
         # Creating Server 
         self.gameSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,6 +70,15 @@ class ServerClass:
 
 
 def askHostInfo() -> (str, int): 
+    """ Ask Player2 about Player1 host information.
+
+    Host information includes host name and port number. 
+    (Player 2 Module Part 1)
+
+    Returns:
+        Tuple of host name (str) and port number (int).
+    """
+
     hostNameAnswer = simpledialog.askstring("HostName", "Enter host name/IP address of Player 2")
     portAnswer = simpledialog.askinteger("Player 2 Port", "Enter Player 2's Port")
 
@@ -47,6 +86,11 @@ def askHostInfo() -> (str, int):
 
 
 def setupPlayer2Connection() -> ServerClass:
+    """ Creating Player2 server 
+
+    Returns:
+        ServerClass: dealing with socket calls 
+    """
     
     # Ask the host information
     server = askHostInfo() 
@@ -57,7 +101,35 @@ def setupPlayer2Connection() -> ServerClass:
     return s
 
 
-def diplayPlayer1Name(root: Tk, name: str): 
+def getPlayer1Username(s: ServerClass, root: Tk) -> str: 
+    """ get player1 username and calling displayPlayer1Name function
+
+    Args:
+        s (ServerClass): dealing with socket calls 
+        root (Tk): tkinter main frame for adding GUI components 
+
+    Returns:
+        str: player1 username 
+        turnLabel: player2's turn 
+    """
+
+    player1Username = s.getData() 
+    turnLabel = displayPlayer1Name(root, player1Username)
+
+    return player1Username, turnLabel
+
+
+def displayPlayer1Name(root: Tk, name: str): 
+    """ Display Player1 username and player2's turn 
+
+    Args:
+        root (Tk): tkinter main frame for adding GUI components 
+        name (str): player1 username
+
+    Returns:
+        tk label: turn label
+    """
+
     headerView = Frame(root)
     headerView.pack()
 
@@ -72,21 +144,31 @@ def diplayPlayer1Name(root: Tk, name: str):
     return l2
 
 
-def getPlayer1Username(s, root: Tk) -> str: 
-    player1Username = s.getData() 
-    turnBtn = diplayPlayer1Name(root, player1Username)
-
-    return player1Username, turnBtn
-
-
 def setPlayer2Username() -> str: 
+    """ Prompt Player2 for thier username.
+
+    Username has to be alphanumeric username.
+
+    Returns:
+        str : Player2 username.
+    """
+
     name = simpledialog.askstring("Player 2 Username", "Enter your alphanumeric Username")
     while not(name.isalnum()):
        name = simpledialog.askstring("Player 2 Username", "Username must be alphanumeric, please try again!")
     return name
 
 
-def sendPlayer2Username(s) -> str: 
+def sendPlayer2Username(s: ServerClass) -> str: 
+    """ Send player2 username to player1
+
+    Args:
+        s (ServerClass): dealing with socket calls
+
+    Returns:
+        str: player2 username
+    """
+
     # Create and send player2 username 
     player2Username = setPlayer2Username()
     s.sendData(player2Username)
@@ -94,11 +176,24 @@ def sendPlayer2Username(s) -> str:
     return player2Username
 
 
-def setupPlayer2BoardGame(s, root: Tk, turnBtn, player1Username, player2Username) -> BoardClass:
+def setupPlayer2BoardGame(s: ServerClass, root: Tk, turnLabel, player1Username: str, player2Username: str) -> BoardClass:
+    """ setup player2 board game with player1's first move
+
+    Args:
+        s (ServerClass): dealing with socket calls
+        root (Tk): tkinter main frame for adding GUI components 
+        turnLabel (_type_): player2's turn 
+        player1Username (str): player1 username
+        player2Username (str): player2 username
+
+    Returns:
+        BoardClass: board game object for player2 
+    """
+
     # setup board game
-    player2 = BoardClass(root, s, "O", turnBtn, player1Username, player2Username, player2Username)
+    player2 = BoardClass(root, s, "O", turnLabel, player1Username, player2Username, player2Username)
     player1Move = s.getData()
-    turnBtn.config(text = "Turn: You")
+    turnLabel.config(text = "Turn: You")
 
     player2.setupBoardGameGUI() 
     player2.updateGameBoard(player1Move, "X")
@@ -106,7 +201,14 @@ def setupPlayer2BoardGame(s, root: Tk, turnBtn, player1Username, player2Username
     return player2
 
 
-def displayStat(player2, root: Tk): 
+def displayStat(player2: BoardClass, root: Tk): 
+    """ Display Stat at the end of the game 
+
+    Args:
+        player2 (BoardClass): dealing with gameboard function calls 
+        root (Tk): tkinter main frame for adding GUI components 
+    """
+
     clearFrame(root)
 
     (player1Name, player2Name, gamePlayed, numWins, numLosses, numTies) = player2.computeStats()
@@ -128,24 +230,33 @@ def displayStat(player2, root: Tk):
 
 
 def clearFrame(root: Tk): 
+    """ clear the main GUI
+
+    Args:
+        root (Tk): tkinter main frame for adding GUI components 
+    """
+
     for widget in root.winfo_children():
         widget.destroy()
 
 
-def checkForGameOver(player2) -> bool: 
-    if player2.isWinner() or player2.boardIsFull():
-        return True
-    return False
+def playGame(player2: BoardClass, s: ServerClass, root: Tk, turnLabel): 
+    """ Play the game by waiting for player1 moves and check if game is over 
 
+    Args:
+        player2 (BoardClass): dealing with gameboard function calls 
+        s (ServerClass): dealing with socket calls 
+        root (Tk): tkinter main frame for adding GUI components 
+        turnLabel (tk label): label for player1 turn
+    """
 
-def playGame(player2, s, root: Tk, turnBtn): 
     while True: 
         player1Move = s.getData()
 
         if player1Move == "Play Again": 
             player2.updateGamesPlayed()
             player2.resetGameBoard()
-            turnBtn.config(text = "Turn: Opponent")
+            turnLabel.config(text = "Turn: Opponent")
             player2.setLockMove(True)
 
         elif player1Move == "Fun Times": 
@@ -158,35 +269,45 @@ def playGame(player2, s, root: Tk, turnBtn):
         else: 
             player2.updateGameBoard(player1Move, "X")
             player2.setLockMove(False)
-            turnBtn.config(text = "Turn: You")
+            turnLabel.config(text = "Turn: You")
 
         if player2.checkForGameOver():
-            turnBtn.config(text = "Turn: Game Over")
+            turnLabel.config(text = "Turn: Game Over")
             player2.setLockMove(True)
             s.sendData("Game Over")
             continue
 
 
 def player2Manager(root: Tk): 
+    """ Connecting with Player1 and playing the game
+
+    Args:
+        root (Tk): tkinter main frame for adding GUI components 
+    """
+
     clearFrame(root)
     
     # Player 2 Module Part 1 & 2 
     s = setupPlayer2Connection()
 
     # Player 2 Module Part 3
-    player1Username, turnBtn = getPlayer1Username(s, root)
+    player1Username, turnLabel = getPlayer1Username(s, root)
 
     # Player 2 Module Part 4.0
     player2Username = sendPlayer2Username(s)
 
     # Player 2 Module Part 4.1 
-    player2 = setupPlayer2BoardGame(s, root, turnBtn, player1Username, player2Username)
+    player2 = setupPlayer2BoardGame(s, root, turnLabel, player1Username, player2Username)
     player2.updateGamesPlayed()
 
-    s.playerThread(playGame, (player2, s, root, turnBtn, ))
+    # Play Game
+    s.playerThread(playGame, (player2, s, root, turnLabel, ))
 
 
 def setupPlayer2Game(): 
+    """ Creating tkinter window and calling player2Manager 
+    """
+
     frame = Tk()
     frame.title("Player 2")
     frame.geometry('500x500')
