@@ -14,7 +14,7 @@ $ Python3 player1.py
 ```
 $ Python3 player2.py
 ```
-To get the hostname of your local machine type: 
+To get the hostname of your local machine type the command below on a sperate terminal: 
 ```
 $ hostname
 ```
